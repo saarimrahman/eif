@@ -96,17 +96,35 @@ class iForest(object):
         self.alpha = alpha
         self.CheckExtensionLevel()  # Extension Level check. See def for explanation.
         self.CheckTrainingShapes()
-        self.CheckAlpha()
         if limit is None:
             self.limit = int(
                 np.ceil(np.log2(self.sample))
             )  # Set limit to the default as specified by the paper (average depth of unsuccesful search through a binary tree).
         self.c = c_factor(self.sample)
+        # for i in range(self.ntrees):  # This loop builds an ensemble of iTrees (the forest).
+        #     ix = rn.sample(range(self.nobjs), self.sample)
+        #     X_p = X[ix]
+        #     y_p = y[ix]
+        #     self.Trees.append(iTree(X_p, y_p, 0, self.limit, exlevel=self.exlevel, alpha=self.alpha))
+
+    def fit(self, X, y):
         for i in range(self.ntrees):  # This loop builds an ensemble of iTrees (the forest).
             ix = rn.sample(range(self.nobjs), self.sample)
             X_p = X[ix]
             y_p = y[ix]
             self.Trees.append(iTree(X_p, y_p, 0, self.limit, exlevel=self.exlevel, alpha=self.alpha))
+
+    def predict(self, X):
+        """
+        inlier = 1, outlier = -1
+        """
+        outlier_idxs = self.decision_function(X) >= 0.5
+        prediction = np.ones(X.shape[0])
+        prediction[outlier_idxs] = -1
+        return prediction
+
+    def decision_function(self, X):
+        return self.compute_paths(X)
 
     def CheckExtensionLevel(self):
         """
@@ -334,8 +352,12 @@ class iTree(object):
         """
         self.e = e
         if (
-            e >= l or len(X) <= 1 or (len(set(y)) == 1 and len(y) <= self.alpha)
+            # e >= l or len(X) <= 1 or (len(set(y)) == 1 and len(y) <= self.alpha)
+            e >= l or len(X) <= 1 or (len(set(y)) <= 1)
+            # len(X) <= 1 or (len(set(y)) <= 1)
+
         ):  # A point is isolated in training data, the depth limit has been reached, or all labels are the same.
+            # print('e >= l', int(e >= l), 'len(X) <= 1', int(len(X) <= 1),  'len(set(y)) <= 1', int(len(set(y)) <= 1))
             left = None
             right = None
             self.exnodes += 1
