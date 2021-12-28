@@ -100,15 +100,20 @@ class iForest(object):
             self.limit = int(
                 np.ceil(np.log2(self.sample))
             )  # Set limit to the default as specified by the paper (average depth of unsuccesful search through a binary tree).
+        # print('limit:', self.limit)
         self.c = c_factor(self.sample)
-        # for i in range(self.ntrees):  # This loop builds an ensemble of iTrees (the forest).
-        #     ix = rn.sample(range(self.nobjs), self.sample)
-        #     X_p = X[ix]
-        #     y_p = y[ix]
-        #     self.Trees.append(iTree(X_p, y_p, 0, self.limit, exlevel=self.exlevel, alpha=self.alpha))
 
     def fit(self, X, y):
         for i in range(self.ntrees):  # This loop builds an ensemble of iTrees (the forest).
+            # cls = np.random.choice(np.unique(y), 1)
+            # rand_class = (y == cls)
+            # sample_size = min(sum(rand_class), self.sample)
+            # print(sample_size)
+
+            # ix = rn.sample(range(sum(rand_class)), sample_size)
+            # X_p = X[rand_class][ix]
+            # y_p = y[rand_class][ix]
+
             ix = rn.sample(range(self.nobjs), self.sample)
             X_p = X[ix]
             y_p = y[ix]
@@ -184,7 +189,33 @@ class iForest(object):
             for j in range(self.ntrees):
                 h_temp += PathFactor(X_in[i], self.Trees[j]).path * 1.0  # Compute path length for each point
             Eh = h_temp / self.ntrees  # Average of path length travelled by the point in all trees.
+            # print(Eh)
             S[i] = 2.0 ** (-Eh / self.c)  # Anomaly Score
+        return S
+
+    def compute_avg_depth(self, X_in=None):
+        """
+        compute_avg_depth(X_in = None)
+        Compute average depth for all data points in a dataset X_in
+
+        Parameters
+        ----------
+        X_in : list of list of floats
+                Data to be scored. iForest.Trees are used for computing the depth reached in each tree by each data point.
+
+        Returns
+        -------
+        float
+            Anomaly score for a given data point.
+        """
+        if X_in is None:
+            X_in = self.X
+        S = np.zeros(len(X_in))
+        for i in range(len(X_in)):
+            h_temp = 0
+            for j in range(self.ntrees):
+                h_temp += PathFactor(X_in[i], self.Trees[j]).path * 1.0  # Compute path length for each point
+            S[i] = h_temp / self.ntrees  # Average of path length travelled by the point in all trees.
         return S
 
     def compute_paths_single_tree(self, X_in=None, tree_index=0):
@@ -256,6 +287,80 @@ class Node(object):
         self.left = left
         self.right = right
         self.ntype = node_type
+
+
+    def __str__(self):
+        lines, *_ = self._display_aux()
+        ret = ""
+        for line in lines:
+            ret += line + '\n'
+
+    def _display_aux(self):
+        # TODO adapt
+        """Returns list of strings, width, height, and horizontal coordinate of the root."""
+        # No child.
+        if self.right is None and self.left is None:
+            line = '%s' % self.key
+            width = len(line)
+            height = 1
+            middle = width // 2
+            return [line], width, height, middle
+
+        # Only left child.
+        if self.right is None:
+            lines, n, p, x = self.left._display_aux()
+            s = '%s' % self.key
+            u = len(s)
+            first_line = (x + 1) * ' ' + (n - x - 1) * '_' + s
+            second_line = x * ' ' + '/' + (n - x - 1 + u) * ' '
+            shifted_lines = [line + u * ' ' for line in lines]
+            return [first_line, second_line] + shifted_lines, n + u, p + 2, n + u // 2
+
+        # Only right child.
+        if self.left is None:
+            lines, n, p, x = self.right._display_aux()
+            s = '%s' % self.key
+            u = len(s)
+            first_line = s + x * '_' + (n - x) * ' '
+            second_line = (u + x) * ' ' + '\\' + (n - x - 1) * ' '
+            shifted_lines = [u * ' ' + line for line in lines]
+            return [first_line, second_line] + shifted_lines, n + u, p + 2, u // 2
+
+        # Two children.
+        left, n, p, x = self.left._display_aux()
+        right, m, q, y = self.right._display_aux()
+        s = '%s' % self.key
+        u = len(s)
+        first_line = (x + 1) * ' ' + (n - x - 1) * '_' + s + y * '_' + (m - y) * ' '
+        second_line = x * ' ' + '/' + (n - x - 1 + u + y) * ' ' + '\\' + (m - y - 1) * ' '
+        if p < q:
+            left += [n * ' '] * (q - p)
+        elif q < p:
+            right += [m * ' '] * (p - q)
+        zipped_lines = zip(left, right)
+        lines = [first_line, second_line] + [a + u * ' ' + b for a, b in zipped_lines]
+        return lines, n + m + u, max(p, q) + 2, n + u // 2
+
+    # def __str__(self, level=0):
+    #     queue = [] # queue for BFS
+    #     queue.append(self)
+
+    #     ret = ""
+    #     while queue:
+    #         s = queue.pop(0)
+    #         ret += ' ' * 4 * level + f'-> n={s.n} | p={s.p} | depth={level}\n '
+    #         if s.left:
+    #             queue.append(s.left)
+    #         if s.right:
+    #             queue.append(s.right)
+    #     return ret
+        # if self:
+        #     ret = ""
+        #     if self.left:
+        #         ret += self.left.__str__(level + 1)
+        #     if self.right:
+        #         ret += self.right.__str__(level + 1)
+        #     return ret
 
 
 class iTree(object):
@@ -352,12 +457,8 @@ class iTree(object):
         """
         self.e = e
         if (
-            # e >= l or len(X) <= 1 or (len(set(y)) == 1 and len(y) <= self.alpha)
-            e >= l or len(X) <= 1 or (len(set(y)) <= 1)
-            # len(X) <= 1 or (len(set(y)) <= 1)
-
+            e >= l or len(set(y)) <= 1 
         ):  # A point is isolated in training data, the depth limit has been reached, or all labels are the same.
-            # print('e >= l', int(e >= l), 'len(X) <= 1', int(len(X) <= 1),  'len(set(y)) <= 1', int(len(set(y)) <= 1))
             left = None
             right = None
             self.exnodes += 1
@@ -389,6 +490,9 @@ class iTree(object):
                 node_type="inNode",
             )
 
+    def __str__(self):
+        if self:
+            return self.root.__str__()
 
 class PathFactor(object):
     """
@@ -442,7 +546,7 @@ class PathFactor(object):
             The depth reached by the data point.
         """
         if T.ntype == "exNode":
-            if T.size <= 1:
+            if T.size <= 1 or len(set(T.y)) <= 1:
                 return self.e
             else:
                 self.e = self.e + c_factor(T.size)

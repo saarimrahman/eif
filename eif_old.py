@@ -135,6 +135,31 @@ class iForest(object):
             S[i] = 2.0 ** (-Eh / self.c)  # Anomaly Score
         return S
 
+    def compute_avg_depth(self, X_in=None):
+        """
+        compute_avg_depth(X_in = None)
+        Compute average depth for all data points in a dataset X_in
+
+        Parameters
+        ----------
+        X_in : list of list of floats
+                Data to be scored. iForest.Trees are used for computing the depth reached in each tree by each data point.
+
+        Returns
+        -------
+        float
+            Anomaly score for a given data point.
+        """
+        if X_in is None:
+            X_in = self.X
+        S = np.zeros(len(X_in))
+        for i in range(len(X_in)):
+            h_temp = 0
+            for j in range(self.ntrees):
+                h_temp += PathFactor(X_in[i], self.Trees[j]).path * 1.0  # Compute path length for each point
+            S[i] = h_temp / self.ntrees  # Average of path length travelled by the point in all trees.
+        return S
+
 
 class Node(object):
     """
