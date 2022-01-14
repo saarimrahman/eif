@@ -1,11 +1,11 @@
-""" Extended Isolation forest functions
+""" Supervised Isolation forest functions
 
 This is the implementation of the Extended Isolation Forest anomaly detection algorithm. This extension, improves the consistency and reliability of the anomaly score produced by standard Isolation Forest represented by Liu et al.
 Our method allows for the slicing of the data to be done using hyperplanes with random slopes which results in improved score maps. The consistency and reliability of the algorithm is much improved using this extension.
 
 """
 
-__author__ = "Matias Carrasco Kind & Sahand Hariri"
+__author__ = "Matias Carrasco Kind & Sahand Hariri & Saarim Rahman"
 import numpy as np
 import random as rn
 import os
@@ -105,15 +105,6 @@ class iForest(object):
 
     def fit(self, X, y):
         for i in range(self.ntrees):  # This loop builds an ensemble of iTrees (the forest).
-            # cls = np.random.choice(np.unique(y), 1)
-            # rand_class = (y == cls)
-            # sample_size = min(sum(rand_class), self.sample)
-            # print(sample_size)
-
-            # ix = rn.sample(range(sum(rand_class)), sample_size)
-            # X_p = X[rand_class][ix]
-            # y_p = y[rand_class][ix]
-
             ix = rn.sample(range(self.nobjs), self.sample)
             X_p = X[ix]
             y_p = y[ix]
