@@ -28,7 +28,8 @@ def create_logdir():
 
 def plot_hist(ax, data, label, title, alpha=None, xlabel=None):
     ax.hist(data, alpha=alpha or 1, label=label)
-    ax.legend()
+    if label:
+        ax.legend()
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     
