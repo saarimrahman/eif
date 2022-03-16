@@ -143,3 +143,31 @@ def construct_datasets(n_samples, noise=0.1):
     
     return ds, names
 
+
+def get_binned_acc(data, X, y, clf, quantile_step: float = 0.10, thresholds: list = None):
+    """Returns (pecentile, acc) to plot"""
+    acc = []
+    percentiles = []
+
+    if not thresholds:
+        quantiles = np.arange(0, 1, 0.10)
+        quantiles = np.append(quantiles, 1)
+        # find binned accuracy for data
+        thresholds = np.quantile(data, quantiles)
+    else:
+        quantiles = thresholds
+
+    for i in range(1, len(thresholds)):
+        curr_thresh = thresholds[i - 1]
+        next_thresh = thresholds[i]
+        # handle edge case where quantiles include a repeated number
+        if next_thresh == curr_thresh:
+            idx_between_thresh = np.where(data == curr_thresh)[0]
+        else:
+            idx_between_thresh = np.where(
+                np.logical_and(data > curr_thresh, data <= next_thresh)
+            )[0]
+        if len(idx_between_thresh): # there are points between these thresholds
+            acc.append(clf.score(X[idx_between_thresh], y[idx_between_thresh]))
+            percentiles.append(quantiles[i])
+    return percentiles, acc
