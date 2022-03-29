@@ -581,3 +581,5 @@ def all_branches(node, current=[], branches=None):
     else:
         branches.append(current)
     return branches
+
+# function that cleans input text and puts spaces around all punctuation using regex
