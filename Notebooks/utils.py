@@ -171,3 +171,11 @@ def get_binned_acc(data, X, y, clf, quantile_step: float = 0.10, thresholds: lis
             acc.append(clf.score(X[idx_between_thresh], y[idx_between_thresh]))
             percentiles.append(quantiles[i])
     return percentiles, acc
+
+def plot_scores_vs_acc(ax, clf, bin_data, X_test, y_test, label):
+    x, acc = get_binned_acc(bin_data, X_test, y_test, clf)
+    ax.plot(x, acc, alpha=0.5, marker='o', label=label)
+    ax.set_title("score vs acc")
+    ax.set_xlabel("score (quantiles)")
+    ax.set_ylabel("acc")
+    ax.legend()
