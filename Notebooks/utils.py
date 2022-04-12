@@ -144,7 +144,7 @@ def construct_datasets(n_samples, noise=0.1):
     return ds, names
 
 
-def get_binned_acc(data, X, y, clf, quantile_step: float = 0.10, thresholds: list = None):
+def get_binned_acc(data, X, y, clf, quantile_step: float = 0.10, thresholds: list = None, cumulative: bool = False):
     """Returns (pecentile, acc) to plot"""
     acc = []
     percentiles = []
@@ -162,20 +162,37 @@ def get_binned_acc(data, X, y, clf, quantile_step: float = 0.10, thresholds: lis
         next_thresh = thresholds[i]
         # handle edge case where quantiles include a repeated number
         if next_thresh == curr_thresh:
-            idx_between_thresh = np.where(data == curr_thresh)[0]
+            idx_between_thresh = np.where(data <= curr_thresh)[0]
         else:
-            idx_between_thresh = np.where(
-                np.logical_and(data > curr_thresh, data <= next_thresh)
-            )[0]
+            if cumulative:
+                idx_between_thresh = np.where(data <= next_thresh)[0]
+            else:
+                idx_between_thresh = np.where(
+                    np.logical_and(data > curr_thresh, data <= next_thresh)
+                )[0]
         if len(idx_between_thresh): # there are points between these thresholds
             acc.append(clf.score(X[idx_between_thresh], y[idx_between_thresh]))
             percentiles.append(quantiles[i])
     return percentiles, acc
 
-def plot_scores_vs_acc(ax, clf, bin_data, X_test, y_test, label):
-    x, acc = get_binned_acc(bin_data, X_test, y_test, clf)
+def plot_scores_vs_acc(ax, clf, bin_data, X_test, y_test, label, cumulative: bool = False):
+    x, acc = get_binned_acc(bin_data, X_test, y_test, clf, cumulative=cumulative)
     ax.plot(x, acc, alpha=0.5, marker='o', label=label)
-    ax.set_title("score vs acc")
+    ax.set_title("score vs acc (cumulative)" if cumulative else 'score vs acc')
     ax.set_xlabel("score (quantiles)")
     ax.set_ylabel("acc")
     ax.legend()
+    
+    
+def hamming(s1: str, s2: str):
+    """Calculate the Hamming distance between two bit strings"""
+    if isinstance(s1, (int, np.integer)):
+        s1 = format(s1, 'b')
+    if isinstance(s2, (int, np.integer)):
+        s2 = format(s2, 'b')
+    if len(s1) < len(s2):
+        s1 = '0' * (len(s2) - len(s1)) + s1
+    elif len(s2) < len(s1):
+        s2 = '0' * (len(s1) - len(s2)) + s2
+    assert len(s1) == len(s2)
+    return sum(c1 != c2 for c1, c2 in zip(s1, s2))
