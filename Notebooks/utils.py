@@ -162,14 +162,11 @@ def get_binned_acc(data, X, y, clf, quantile_step: float = 0.10, thresholds: lis
         next_thresh = thresholds[i]
         # handle edge case where quantiles include a repeated number
         if next_thresh == curr_thresh:
-            idx_between_thresh = np.where(data <= curr_thresh)[0]
+            idx_between_thresh = np.where(data <= curr_thresh)[0] if cumulative else np.where(data == curr_thresh)[0]
         else:
-            if cumulative:
-                idx_between_thresh = np.where(data <= next_thresh)[0]
-            else:
-                idx_between_thresh = np.where(
-                    np.logical_and(data > curr_thresh, data <= next_thresh)
-                )[0]
+            idx_between_thresh = np.where(data <= next_thresh)[0] if cumulative else np.where(
+                np.logical_and(data > curr_thresh, data <= next_thresh)
+            )[0]
         if len(idx_between_thresh): # there are points between these thresholds
             acc.append(clf.score(X[idx_between_thresh], y[idx_between_thresh]))
             percentiles.append(quantiles[i])
