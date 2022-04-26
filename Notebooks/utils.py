@@ -144,7 +144,7 @@ def construct_datasets(n_samples, noise=0.1):
     return ds, names
 
 
-def get_binned_acc(data, X, y, clf, quantile_step: float = 0.10, thresholds: list = None, cumulative: bool = False):
+def get_binned_acc(data, X, y, clf, quantile_step: float = 0.10, thresholds: list = None, cumulative: bool = False, custom_scoring: bool = False):
     """Returns (pecentile, acc) to plot"""
     acc = []
     percentiles = []
@@ -167,8 +167,12 @@ def get_binned_acc(data, X, y, clf, quantile_step: float = 0.10, thresholds: lis
             idx_between_thresh = np.where(data <= next_thresh)[0] if cumulative else np.where(
                 np.logical_and(data > curr_thresh, data <= next_thresh)
             )[0]
-        if len(idx_between_thresh): # there are points between these thresholds
-            acc.append(clf.score(X[idx_between_thresh], y[idx_between_thresh]))
+        if size_of_bin := len(idx_between_thresh): # there are points between these thresholds
+            score = clf.score(X[idx_between_thresh], y[idx_between_thresh])
+            if custom_scoring:
+                acc.append(clf.score + 0.5 / np.sqrt(size_of_bin)) 
+            else:
+                acc.append(score)
             percentiles.append(quantiles[i])
     return percentiles, acc
 
